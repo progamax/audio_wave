@@ -33,14 +33,14 @@ class AudioWaveBar {
 class AudioWave extends StatefulWidget {
   const AudioWave(
       {required this.bars,
-      this.height = 100,
-      this.width = 200,
-      this.spacing = 5,
-      this.alignment = 'center',
-      this.animation = true,
-      this.animationLoop = 0,
-      this.beatRate = const Duration(milliseconds: 200),
-      Key? key})
+        this.height = 100,
+        this.width = 200,
+        this.spacing = 5,
+        this.alignment = 'center',
+        this.animation = true,
+        this.animationLoop = 0,
+        this.beatRate = const Duration(milliseconds: 200),
+        Key? key})
       : super(key: key);
   final List<AudioWaveBar> bars;
 
@@ -75,6 +75,8 @@ class _AudioWaveState extends State<AudioWave> {
 
   List<AudioWaveBar>? bars;
 
+  Timer? timer;
+
   @override
   void initState() {
     super.initState();
@@ -82,7 +84,7 @@ class _AudioWaveState extends State<AudioWave> {
       bars = [];
 
       WidgetsBinding.instance?.addPostFrameCallback((x) {
-        Timer.periodic(widget.beatRate, (timer) {
+        timer = Timer.periodic(widget.beatRate, (timer) {
           int mo = countBeat % widget.bars.length;
 
           bars = List.from(widget.bars.getRange(0, mo + 1));
@@ -102,8 +104,25 @@ class _AudioWaveState extends State<AudioWave> {
   @override
   void didUpdateWidget(AudioWave oldWidget) {
     super.didUpdateWidget(oldWidget);
-    bars = widget.bars;
-    setState(() {});
+    if(!oldWidget.animation && widget.animation){
+      bars = [];
+
+      WidgetsBinding.instance?.addPostFrameCallback((x) {
+        timer = Timer.periodic(widget.beatRate, (timer) {
+          int mo = countBeat % widget.bars.length;
+
+          bars = List.from(widget.bars.getRange(0, mo + 1));
+          if (mounted) setState(() {});
+          countBeat++;
+
+          if (widget.animationLoop > 0 && widget.animationLoop <= (countBeat / widget.bars.length)) {
+            timer.cancel();
+          }
+        });
+      });
+    }else if(oldWidget.animation && !widget.animation){
+      timer?.cancel();
+    }
   }
 
   @override
@@ -119,8 +138,8 @@ class _AudioWaveState extends State<AudioWave> {
             crossAxisAlignment: widget.alignment == 'top'
                 ? WrapCrossAlignment.start
                 : widget.alignment == 'bottom'
-                    ? WrapCrossAlignment.end
-                    : WrapCrossAlignment.center,
+                ? WrapCrossAlignment.end
+                : WrapCrossAlignment.center,
             spacing: widget.spacing,
             children: [
               if (bars != null)
@@ -139,5 +158,11 @@ class _AudioWaveState extends State<AudioWave> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    timer?.cancel();
   }
 }
